@@ -5,13 +5,18 @@ class MenuScene extends Phaser.Scene {
     }
 
     preload() {
-       this.load.image('fonsMenu', 'foto_menu.jpg'); 
+       this.load.image('fonsMenu', 'foto_menu.jpg');
+       this.load.audio('soMenu', 'musica_menu.mp3');
+
     }
 
     create() {
         let fons = this.add.image(640, 360, 'fonsMenu');
         fons.setDisplaySize(1280, 720);
         this.cameras.main.setBackgroundColor('#a8d5e2');
+
+        let musicaFons = this.sound.add('soMenu', { loop: true, volume: 0.5 });
+        musicaFons.play();
 
         //estil cartoon
         this.add.text(640, 210, 'PARENTAL DUTIES\nRITME!', { 
@@ -45,6 +50,7 @@ class MenuScene extends Phaser.Scene {
 
         //on click, iniciar el joc
         botoJugar.on('pointerdown', () => {
+            musicaFons.stop();
             this.scene.start('JocScene');
         });
     }

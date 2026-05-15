@@ -10,3 +10,10 @@ DESCRIPCIÓ DE LES PARTS MÉS RELLEVANTS DE LA IMPLEMENTACIÓ
 CONCLUSIONS I PROBLEMES TROBATS
 
 MANUAL D'USUARI
+
+#MUSICA
+
+MENU:
+"Disco Medusae" Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0 License
+

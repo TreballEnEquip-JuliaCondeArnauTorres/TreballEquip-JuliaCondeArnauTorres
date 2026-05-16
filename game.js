@@ -72,10 +72,21 @@ class JocScene extends Phaser.Scene {
         
         //dibuixar els carrils
         this.posicionsX = [415, 565, 715, 865];
+        const tecles = ['D', 'F', 'J', 'K'];
 
-        this.posicionsX.forEach(posX => {
+        this.posicionsX.forEach((posX, i) => {
             this.add.rectangle(posX, 360, 100, 720, 0xffffff, 0.1);
             this.add.circle(posX, 600, 40, 0x000000, 0.5).setStrokeStyle(4, 0xffffff);
+            
+            this.add.text(posX, 670, tecles[i],{
+                fontSize: '40px', 
+                fontFamily: '"Bangers", cursive', 
+                fill: '#fff',
+                padding: { left: 10, right: 10, top: 10, bottom: 10 }
+            }).setOrigin(0.5);
+            this.input.keyboard.on(`keydown-${tecles[i]}`, () => {
+            this.comprovarInputNota(i); 
+            });
         });
 
         this.add.text(640, 50, 'OPERACIÓ', { 
@@ -83,18 +94,9 @@ class JocScene extends Phaser.Scene {
             fontFamily: '"Bangers", cursive', 
             fill: '#ff4d4d',
             stroke: '#000000',
-            strokeThickness: 6
+            strokeThickness: 6,
+            padding: {left: 10, right: 10, top: 20, bottom:10 }
         }).setOrigin(0.5);
-
-        const tecles = ['D', 'F', 'J', 'K'];
-        for (let i = 0; i < 4; i++) {
-            this.add.text(this.posicionsX[i], 670, tecles[i], { 
-                fontSize: '40px', 
-                fontFamily: '"Bangers", cursive', 
-                fill: '#fff',
-                padding: {left: 10, right: 10, top: 10, bottom:10 }
-            }).setOrigin(0.5);
-        }
 
          this.puntuacio = 0;
          this.textPuntuacio = this.add.text(1100, 50, 'PUNTS: 0', { 
@@ -102,7 +104,8 @@ class JocScene extends Phaser.Scene {
             fontFamily: '"Bangers", cursive', 
             fill: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 5
+            strokeThickness: 5,
+            padding: {left: 10, right: 10, top: 10, bottom:10 }
         }).setOrigin(0.5);
 
         this.add.text(20, 20, 'ESC per tornar al menú', { fontSize: '16px', fill: '#ffffff' });
@@ -118,31 +121,44 @@ class JocScene extends Phaser.Scene {
         });
             //nota provisional
             this.notaProvisional = this.add.rectangle(this.posicionsX[0], 0, 50, 50, 0x00ff00);
-            //detectar input D
-            this.input.keyboard.on('keydown-D', () => {
-            //comprovar que la nota esta a la zona
-            if (this.notaProvisional && this.notaProvisional.y > 550 && this.notaProvisional.y < 650) { 
-                console.log("PERFECTE!");
-                
-                this.cameras.main.setBackgroundColor('#4CAF50');
-                setTimeout(() => {
-                    this.cameras.main.setBackgroundColor('#2b4141');
-                }, 100);
+            this.notaProvisional.carrilId = 0;
+    }
+    
+    comprovarInputNota(carril){
+    
+        if (this.notaProvisional && 
+            this.notaProvisional.carrilId === carril && 
+            this.notaProvisional.y > 550 && 
+            this.notaProvisional.y < 650) { 
+            
+            console.log("PERFECTE!");
+            this.puntuacio += 10;
+            this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
+            
+            this.canviarColorPantalla('#4CAF50'); 
 
-                //reiniciar nota
-                this.notaProvisional.y = 0;
-            } else {
-                //fallada
-                console.log("FALLADA!");
 
-                this.cameras.main.setBackgroundColor('#ff4d4d');
-                setTimeout(() => {
-                    this.cameras.main.setBackgroundColor('#2b4141');
-                }, 100);
-            }
-        });
+            this.reiniciarNota();
+        } else {
+
+            console.log("FALLADA!");
+            this.canviarColorPantalla('#ff4d4d'); 
+        }
+    }
+    reiniciarNota() {
+        let carrilAleatori = Phaser.Math.Between(0, 3);
+        this.notaProvisional.x = this.posicionsX[carrilAleatori];
+        this.notaProvisional.y = 0;
+        this.notaProvisional.carrilId = carrilAleatori;
     }
 
+    canviarColorPantalla(color) {
+        this.cameras.main.setBackgroundColor(color);
+        this.time.delayedCall(100, () => {
+            this.cameras.main.setBackgroundColor('#2b4141');
+        });
+    }
+    
     update() {
         if (this.notaProvisional) {
             this.notaProvisional.y += 5; //velocitat de caiguda
@@ -163,7 +179,7 @@ class PausaScene extends Phaser.Scene {
         this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.8);
 
         //text de pausa
-        this.add.text(640, 250, 'PAUSA', { 
+        let titolPausa = this.add.text(640, 250, 'PAUSA', { 
             fontSize: '80px', 
             fontFamily: '"Bangers", cursive', 
             fill: '#4ce1fe',
@@ -172,19 +188,51 @@ class PausaScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         //text instruccions
-        this.add.text(640, 450, 'Prem la tecla "P" per reprendre la operació', { 
+        let textInstruccions = this.add.text(640, 450, 'Prem la tecla "P" per reprendre la operació', { 
             fontSize: '30px', 
             fontFamily: '"Bangers", cursive', 
             fill: '#ffffff' 
         }).setOrigin(0.5);
 
+        let reprenent = false;
+
         //P per reprendre el joc
         this.input.keyboard.on('keydown-P', () => {
-            this.scene.stop(); //tancar el menú de pausa
-            this.scene.resume('JocScene'); //descongelar el joc de fons
+            if(reprenent) return; //ignorar la tecla si ja esta reprenent
+            reprenent = true;
+            
+            titolPausa.setVisible(false);
+            textInstruccions.setVisible(false);
+            
+            let comptador = 3;
+
+            let textComptador = this.add.text(640, 360, comptador.toString(), {
+                fontSize: '150px',
+                fontFamily: '"Bangers", cursive',
+                fill: '#ff4d4d',
+                stroke: '#000000',
+                strokeThickness: 10,
+                padding: { x: 20, y: 20 }
+            }).setOrigin(0.5);
+
+            //temporitzador
+            this.time.addEvent({
+                delay: 1000, 
+                repeat: 2, //executar 3 vegades
+                callback: () => {
+                    comptador--;
+                    if (comptador > 0) {
+                        textComptador.setText(comptador.toString());
+                    } else {
+                        //quan arriba a 0
+                        this.scene.stop(); //tancar el menú de pausa
+                        this.scene.resume('JocScene'); //descongelar el joc de fons
+                    }
+                }
+            });
         });
     }
-}
+};
 
 //config basica de Phaser
 const config = {

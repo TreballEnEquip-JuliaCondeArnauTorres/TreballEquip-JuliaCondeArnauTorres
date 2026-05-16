@@ -1,3 +1,4 @@
+
 //escena menu
 class MenuScene extends Phaser.Scene {
     constructor() {
@@ -90,14 +91,30 @@ class JocScene extends Phaser.Scene {
             this.add.text(this.posicionsX[i], 670, tecles[i], { 
                 fontSize: '40px', 
                 fontFamily: '"Bangers", cursive', 
-                fill: '#fff' 
+                fill: '#fff',
+                padding: {left: 10, right: 10, top: 10, bottom:10 }
             }).setOrigin(0.5);
         }
+
+         this.puntuacio = 0;
+         this.textPuntuacio = this.add.text(1100, 50, 'PUNTS: 0', { 
+            fontSize: '40px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 5
+        }).setOrigin(0.5);
 
         this.add.text(20, 20, 'ESC per tornar al menú', { fontSize: '16px', fill: '#ffffff' });
         //tornar al menu amb ESC
         this.input.keyboard.on('keydown-ESC', () => {
             this.scene.start('MenuScene');
+        });
+
+        //pausar el joc amb P
+        this.input.keyboard.on('keydown-P', () => {
+            this.scene.pause(); //congelar escena
+            this.scene.launch('PausaScene'); //obrir escena pausa
         });
             //nota provisional
             this.notaProvisional = this.add.rectangle(this.posicionsX[0], 0, 50, 50, 0x00ff00);
@@ -136,13 +153,46 @@ class JocScene extends Phaser.Scene {
     }
 }
 
+//escena pausa
+class PausaScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'PausaScene' });
+    }
+
+    create() {
+        this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.8);
+
+        //text de pausa
+        this.add.text(640, 250, 'PAUSA', { 
+            fontSize: '80px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: '#4ce1fe',
+            stroke: '#000000',
+            strokeThickness: 8
+        }).setOrigin(0.5);
+
+        //text instruccions
+        this.add.text(640, 450, 'Prem la tecla "P" per reprendre la operació', { 
+            fontSize: '30px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: '#ffffff' 
+        }).setOrigin(0.5);
+
+        //P per reprendre el joc
+        this.input.keyboard.on('keydown-P', () => {
+            this.scene.stop(); //tancar el menú de pausa
+            this.scene.resume('JocScene'); //descongelar el joc de fons
+        });
+    }
+}
+
 //config basica de Phaser
 const config = {
     type: Phaser.AUTO,
     width: 1280,
     height: 720,
     backgroundColor: '#000000',
-    scene: [MenuScene, JocScene] 
+    scene: [MenuScene, JocScene, PausaScene] 
 };
 
 //iniciar el joc amb la config

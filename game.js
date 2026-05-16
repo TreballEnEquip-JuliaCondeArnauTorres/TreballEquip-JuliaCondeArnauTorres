@@ -67,18 +67,72 @@ class JocScene extends Phaser.Scene {
     }
 
     create() {
-        this.add.text(640, 300, 'Partida', { fontSize: '32px', fill: '#00ff00' }).setOrigin(0.5);
+        this.cameras.main.setBackgroundColor('#2b4141');
         
-        this.add.text(640, 500, 'ESC per tornar al menú', { fontSize: '16px', fill: '#ffffff' }).setOrigin(0.5);
+        //dibuixar els carrils
+        this.posicionsX = [415, 565, 715, 865];
 
+        this.posicionsX.forEach(posX => {
+            this.add.rectangle(posX, 360, 100, 720, 0xffffff, 0.1);
+            this.add.circle(posX, 600, 40, 0x000000, 0.5).setStrokeStyle(4, 0xffffff);
+        });
+
+        this.add.text(640, 50, 'OPERACIÓ', { 
+            fontSize: '50px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: '#ff4d4d',
+            stroke: '#000000',
+            strokeThickness: 6
+        }).setOrigin(0.5);
+
+        const tecles = ['D', 'F', 'J', 'K'];
+        for (let i = 0; i < 4; i++) {
+            this.add.text(this.posicionsX[i], 670, tecles[i], { 
+                fontSize: '40px', 
+                fontFamily: '"Bangers", cursive', 
+                fill: '#fff' 
+            }).setOrigin(0.5);
+        }
+
+        this.add.text(20, 20, 'ESC per tornar al menú', { fontSize: '16px', fill: '#ffffff' });
         //tornar al menu amb ESC
         this.input.keyboard.on('keydown-ESC', () => {
             this.scene.start('MenuScene');
         });
+            //nota provisional
+            this.notaProvisional = this.add.rectangle(this.posicionsX[0], 0, 50, 50, 0x00ff00);
+            //detectar input D
+            this.input.keyboard.on('keydown-D', () => {
+            //comprovar que la nota esta a la zona
+            if (this.notaProvisional && this.notaProvisional.y > 550 && this.notaProvisional.y < 650) { 
+                console.log("PERFECTE!");
+                
+                this.cameras.main.setBackgroundColor('#4CAF50');
+                setTimeout(() => {
+                    this.cameras.main.setBackgroundColor('#2b4141');
+                }, 100);
+
+                //reiniciar nota
+                this.notaProvisional.y = 0;
+            } else {
+                //fallada
+                console.log("FALLADA!");
+
+                this.cameras.main.setBackgroundColor('#ff4d4d');
+                setTimeout(() => {
+                    this.cameras.main.setBackgroundColor('#2b4141');
+                }, 100);
+            }
+        });
     }
 
     update() {
-        
+        if (this.notaProvisional) {
+            this.notaProvisional.y += 5; //velocitat de caiguda
+            if (this.notaProvisional.y > 750) {
+                this.notaProvisional.y = 0;
+            }
+        }
     }
 }
 

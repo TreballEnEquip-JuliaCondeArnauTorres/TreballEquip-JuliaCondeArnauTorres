@@ -83,9 +83,16 @@ class JocScene extends Phaser.Scene {
                 fontFamily: '"Bangers", cursive', 
                 fill: '#fff',
                 padding: { left: 10, right: 10, top: 10, bottom: 10 }
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setDepth(10);
+
+            //detectar premer tecla
             this.input.keyboard.on(`keydown-${tecles[i]}`, () => {
-            this.comprovarInputNota(i); 
+                this.comprovarInputNota(i); 
+            });
+
+            //detectar soltar tecla
+            this.input.keyboard.on(`keyup-${tecles[i]}`, () => {
+                this.alliberarInputNota(i); 
             });
         });
 
@@ -119,51 +126,123 @@ class JocScene extends Phaser.Scene {
             this.scene.pause(); //congelar escena
             this.scene.launch('PausaScene'); //obrir escena pausa
         });
-            //nota provisional
-            this.notaProvisional = this.add.rectangle(this.posicionsX[0], 0, 50, 50, 0x00ff00);
-            this.notaProvisional.carrilId = 0;
+
+        this.notes = []; //llista per guardar notes
+            
+        this.programarSeguentNota();
+
+    }
+
+    crearNota(){
+
+        let carrilAleatori = Phaser.Math.Between(0, 3);
+
+        //20% probabilitat nota llarga
+        let esLlarga = Phaser.Math.Between(1, 10) > 8; 
+        let alcada = esLlarga ? 250 : 50;
+        let color = esLlarga ? 0x00ffff : 0x00ff00;
+        
+        let novaNota = this.add.rectangle(this.posicionsX[carrilAleatori], -150, 50, alcada, color);
+        novaNota.carrilId = carrilAleatori;
+        novaNota.esLlarga = esLlarga;
+        novaNota.mantinguda = false;
+        
+        //afegir nova nota a la llista
+        this.notes.push(novaNota);
     }
     
     comprovarInputNota(carril){
     
-        if (this.notaProvisional && 
-            this.notaProvisional.carrilId === carril && 
-            this.notaProvisional.y > 550 && 
-            this.notaProvisional.y < 650) { 
+        let encert = false;
+
+        for (let i = this.notes.length - 1; i >= 0; i--) {
+            let nota = this.notes[i];
             
-            console.log("PERFECTE!");
-            this.puntuacio += 10;
-            this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
-            
-            this.canviarColorPantalla('#4CAF50'); 
+            let partBaixa = nota.y + (nota.height / 2);
 
+            if (nota.carrilId === carril && partBaixa > 550 && partBaixa < 650) { 
+                encert = true;
 
-            this.reiniciarNota();
-        } else {
+                if (nota.esLlarga) {
 
+                    nota.mantinguda = true;
+                    nota.fillColor = 0xffffff; 
+                    this.puntuacio += 5;
+                    this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
+                } else {
+
+                    this.puntuacio += 10;
+                    this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
+                    this.canviarColorPantalla('#4CAF50'); 
+                    nota.destroy();
+                    this.notes.splice(i, 1);
+                }
+                break;
+            }
+        }
+        //si no encerta
+        if (!encert) {
             console.log("FALLADA!");
             this.canviarColorPantalla('#ff4d4d'); 
         }
     }
-    reiniciarNota() {
-        let carrilAleatori = Phaser.Math.Between(0, 3);
-        this.notaProvisional.x = this.posicionsX[carrilAleatori];
-        this.notaProvisional.y = 0;
-        this.notaProvisional.carrilId = carrilAleatori;
-    }
 
+    alliberarInputNota(carril) {
+
+        for (let i = this.notes.length - 1; i >= 0; i--) {
+            let nota = this.notes[i];
+            
+            if (nota.carrilId === carril && nota.mantinguda) {
+
+                let partDalt = nota.y - (nota.height / 2);
+                
+                //si passa pel cercle
+                if (partDalt > 500 && partDalt < 700) {
+                    this.puntuacio += 20; 
+                    this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
+                    this.canviarColorPantalla('#4CAF50');
+                } else {
+                    this.canviarColorPantalla('#ff4d4d');
+                }
+                
+                nota.destroy();
+                this.notes.splice(i, 1);
+                break;
+            }
+        }
+    }
+   
     canviarColorPantalla(color) {
         this.cameras.main.setBackgroundColor(color);
         this.time.delayedCall(100, () => {
             this.cameras.main.setBackgroundColor('#2b4141');
         });
     }
+
+    programarSeguentNota() {
+        //temps aleatori
+        let tempsAleatori = Phaser.Math.Between(600, 1500); 
+        
+        this.time.delayedCall(tempsAleatori, () => {
+            this.crearNota();
+            this.programarSeguentNota(); //bucle infinit aleatori
+        });
+    }
     
     update() {
-        if (this.notaProvisional) {
-            this.notaProvisional.y += 5; //velocitat de caiguda
-            if (this.notaProvisional.y > 750) {
-                this.notaProvisional.y = 0;
+        for (let i = this.notes.length - 1; i >= 0; i--) {
+            let nota = this.notes[i];
+            nota.y += 5; // velocitat de caiguda
+
+            //calcular la part de dalt de la nota
+            let partDalt = nota.y - (nota.height / 2);
+
+            if (partDalt > 750) {
+                if (!nota.mantinguda) {
+                    this.canviarColorPantalla('#ff4d4d');
+                }
+                nota.destroy();
+                this.notes.splice(i, 1);
             }
         }
     }

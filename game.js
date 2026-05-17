@@ -71,8 +71,14 @@ class JocScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#2b4141');
         
         //musica de fons
-        this.musicaFons = this.sound.add('soJoc', { loop: true, volume: 0.5 });
+        this.jocActiu = true;
+
+        this.musicaFons = this.sound.add('soJoc', { loop: false, volume: 0.5 });
         this.musicaFons.play();
+
+        this.musicaFons.on('complete', () => {
+            this.finalitzarJoc();
+        });
         
         //dibuixar els carrils
         this.posicionsX = [415, 565, 715, 865];
@@ -110,6 +116,9 @@ class JocScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
          this.puntuacio = 0;
+         this.comboActual = 0;
+         this.comboMaxim = 0;
+         this.multiplicador = 1;
          this.textPuntuacio = this.add.text(1100, 50, 'PUNTS: 0', { 
             fontSize: '40px', 
             fontFamily: '"Bangers", cursive', 
@@ -119,13 +128,34 @@ class JocScene extends Phaser.Scene {
             padding: {left: 10, right: 10, top: 10, bottom:10 }
         }).setOrigin(0.5);
 
-        this.add.text(20, 20, 'ESC per tornar al menú', { fontSize: '16px', fill: '#ffffff' });
+        this.textCombo = this.add.text(1100, 150, '', {
+            fontSize: '55px', fontFamily: '"Bangers", cursive', fill: '#ffffff',
+            stroke: '#000000', strokeThickness: 6, align: 'center',
+            padding: {left: 10, right: 10, top: 10, bottom:10 }
+        }).setOrigin(0.5).setVisible(false);
+
+        this.add.text(20, 20, 'ESC per tornar al menú', { 
+            fontSize: '24px',
+            fontFamily: '"Bangers", cursive', 
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4,
+            padding: { left: 5, right: 10, top: 5, bottom: 5 }
+        });
         //tornar al menu amb ESC
         this.input.keyboard.on('keydown-ESC', () => {
             this.musicaFons.stop();
             this.scene.start('MenuScene');
         });
 
+        this.add.text(20, 55, 'P per pausar el joc', { 
+            fontSize: '24px',
+            fontFamily: '"Bangers", cursive', 
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4,
+            padding: { left: 5, right: 10, top: 5, bottom: 5 }
+        });
         //pausar el joc amb P
         this.input.keyboard.on('keydown-P', () => {
             this.musicaFons.pause();
@@ -145,6 +175,7 @@ class JocScene extends Phaser.Scene {
 
     crearNota(){
 
+        if (!this.jocActiu) return;
         let carrilAleatori = Phaser.Math.Between(0, 3);
 
         //20% probabilitat nota llarga
@@ -172,31 +203,74 @@ class JocScene extends Phaser.Scene {
 
             if (nota.carrilId === carril && partBaixa > 550 && partBaixa < 650) { 
                 encert = true;
+                this.comboActual++;
+                if (this.comboActual > this.comboMaxim) {
+                this.comboMaxim = this.comboActual;
+                }
+                this.actualitzarMultiplicador();
 
                 if (nota.esLlarga) {
 
                     nota.mantinguda = true;
                     nota.fillColor = 0xffffff; 
-                    this.puntuacio += 5;
+                    this.puntuacio += 5*this.multiplicador;
                     this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
                 } else {
 
-                    this.puntuacio += 10;
+                    this.puntuacio += 10*this.multiplicador;
                     this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
                     this.canviarColorPantalla('#4CAF50'); 
                     nota.destroy();
                     this.notes.splice(i, 1);
                 }
+                this.actualitzarInterficie();
                 break;
             }
         }
         //si no encerta
         if (!encert) {
             console.log("FALLADA!");
-            this.canviarColorPantalla('#ff4d4d'); 
+            this.canviarColorPantalla('#ff4d4d');
+            this.trencarCombo(); 
         }
     }
 
+    actualitzarMultiplicador() {
+        if (this.comboActual >= 30) {
+            this.multiplicador = 4;
+            this.textCombo.setColor('#ff0000');
+        }
+        else if (this.comboActual >= 20){
+            this.multiplicador = 3;
+            this.textCombo.setColor('#ff7300');
+        } 
+        else if (this.comboActual >= 10) {
+            this.multiplicador = 2;
+            this.textCombo.setColor('#fff000');
+        }
+        else{
+            this.multiplicador = 1;
+            this.textCombo.setColor('#ffffff');
+        }
+    }
+
+    trencarCombo() {
+        this.comboActual = 0;
+        this.multiplicador = 1;
+        this.textCombo.setColor('#ffffff')
+        this.canviarColorPantalla('#ff4d4d'); 
+        this.actualitzarInterficie();
+    }
+
+    actualitzarInterficie() {
+        this.textPuntuacio.setText(`PUNTS: ${this.puntuacio}`);
+        if (this.comboActual >= 3) {
+            this.textCombo.setText(`${this.comboActual} COMBO\nx${this.multiplicador}`);
+            this.textCombo.setVisible(true);
+        } else {
+            this.textCombo.setVisible(false);
+        }
+    }
     alliberarInputNota(carril) {
 
         for (let i = this.notes.length - 1; i >= 0; i--) {
@@ -230,6 +304,9 @@ class JocScene extends Phaser.Scene {
     }
 
     programarSeguentNota() {
+        //si la canco s'ha acabat
+        if (!this.jocActiu) return;
+
         //temps aleatori
         let tempsAleatori = Phaser.Math.Between(600, 1500); 
         
@@ -239,7 +316,64 @@ class JocScene extends Phaser.Scene {
         });
     }
     
+    finalitzarJoc() {
+        this.jocActiu = false;
+
+        //esborrar les notes que queden per pantalla
+        for (let i = 0; i < this.notes.length; i++) {
+            this.notes[i].destroy();
+        }
+        this.notes = [];
+
+        this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.8).setDepth(20);
+
+        let puntsPerGuanyar = 700;
+        let hasGuanyat = this.puntuacio >= puntsPerGuanyar;
+        
+        let missatge = hasGuanyat ? 'OPERACIÓ COMPLETADA!' : 'OPERACIÓ FALLIDA...';
+        let colorMissatge = hasGuanyat ? '#4CAF50' : '#ff4d4d';
+
+        //victoria o derrota
+        this.add.text(640, 200, missatge, { 
+            fontSize: '80px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: colorMissatge,
+            stroke: '#000000',
+            strokeThickness: 8,
+            padding: { x: 20, y: 20 }
+        }).setOrigin(0.5).setDepth(21);
+
+        //puntuacio final
+        this.add.text(640, 350, `PUNTUACIÓ FINAL: ${this.puntuacio}`, { 
+            fontSize: '60px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: '#ffffff',
+            padding: { x: 20, y: 20 }
+        }).setOrigin(0.5).setDepth(21);
+
+        //combo maxim
+        this.add.text(640, 450, `COMBO MÀXIM: ${this.comboMaxim} NOTES SEGUIDES!`, { 
+            fontSize: '40px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: '#f1c40f',
+            stroke: '#000000',
+            strokeThickness: 5,
+            padding: { x: 20, y: 20 }
+        }).setOrigin(0.5).setDepth(21);
+
+        this.add.text(640, 550, 'Prem ESC per tornar al menú', { 
+            fontSize: '30px', 
+            fontFamily: '"Bangers", cursive', 
+            fill: '#ff4d4d',
+            padding: { x: 10, y: 10 }
+        }).setOrigin(0.5).setDepth(21);
+
+    }
+
     update() {
+
+        if (!this.jocActiu) return;
+
         for (let i = this.notes.length - 1; i >= 0; i--) {
             let nota = this.notes[i];
             nota.y += 5; // velocitat de caiguda

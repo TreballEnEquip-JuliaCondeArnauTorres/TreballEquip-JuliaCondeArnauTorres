@@ -64,11 +64,15 @@ class JocScene extends Phaser.Scene {
     }
 
     preload() {
-        
+        this.load.audio('soJoc', 'musica_joc.mp3');
     }
 
     create() {
         this.cameras.main.setBackgroundColor('#2b4141');
+        
+        //musica de fons
+        this.musicaFons = this.sound.add('soJoc', { loop: true, volume: 0.5 });
+        this.musicaFons.play();
         
         //dibuixar els carrils
         this.posicionsX = [415, 565, 715, 865];
@@ -118,13 +122,19 @@ class JocScene extends Phaser.Scene {
         this.add.text(20, 20, 'ESC per tornar al menú', { fontSize: '16px', fill: '#ffffff' });
         //tornar al menu amb ESC
         this.input.keyboard.on('keydown-ESC', () => {
+            this.musicaFons.stop();
             this.scene.start('MenuScene');
         });
 
         //pausar el joc amb P
         this.input.keyboard.on('keydown-P', () => {
+            this.musicaFons.pause();
             this.scene.pause(); //congelar escena
             this.scene.launch('PausaScene'); //obrir escena pausa
+        });
+
+        this.events.on('resume', () => {
+            this.musicaFons.resume();
         });
 
         this.notes = []; //llista per guardar notes
